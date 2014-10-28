@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title><%= @cnName %></title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+        <meta name="description" content="<%= @description  %>" />
+        <link type="text/css" rel="stylesheet" href="../style/avalon.doc.css"/>
+    </head>
+    <body>
+        <div class="wrapper">
+            <h2><%= @enName %></h2>
+            <fieldset>
+                <legend><%= @cnName %></legend>
+                <%= @description %>
+            </fieldset>
+            <fieldset>
+                <legend>使用说明</legend>
+                <%= @summary %>
+                <table class="table-doc">
+                    <col width="180"/>
+                    <col width="180"/>
+                    <tr>
+                        <th>名字</th><th>默认值</th> <th>说明</th>
+                    </tr> 
+                    <%- for(var i=0, n = @trs.length, tr; i < n; i++){ -%>
+                    <tr>
+                        <% tr = @trs[i] -%>
+                        <% if(tr.span){ %>
+                        <td><%= tr.span %></td>
+                        <%- } else {-%>
+                        <td><%= tr.name %></td>   <td><%= tr.defaultValue %></td>   <td><%= tr.explain %></td>
+                        <%- } -%>
+                    </tr> 
+                    <%- } -%>
+                </table>
+            </fieldset>
+            <ul>
+                <%- for(var i=0, n = @links.length, link; i < n; i++){ -%>
+                <- link = @links[i] ->
+                <li><a href="<%= link.href %>"><%= link.text %></a></li>
+                <%- } -%>
+            </ul>
+        </div>
+    </body>
+</html>
