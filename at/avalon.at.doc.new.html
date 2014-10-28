@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>avalon类似新浪微博的@提示组件</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+        <meta name="descriptions" content="经常使用微博的人会发现，当我们在输入框输入@然后敲一个人的名字，会弹出一个<code>tip提示层</code>，里面是一个名字列表。这是社交网站或应用最近非常流行的功能。
+ 当你发布<code>@昵称</code>的信息时，在这里的意思是“向某某人说”，对方能看到你说的话，并能够回复，实现一对一的沟通。" />
+        <link type="text/css" rel="stylesheet" href="../style/avalon.doc.css"/>
+    </head>
+    <body>
+        <div class="wrapper">
+            <h2>at</h2>
+            <fieldset>
+                <legend>avalon类似新浪微博的@提示组件</legend>
+                经常使用微博的人会发现，当我们在输入框输入@然后敲一个人的名字，会弹出一个<code>tip提示层</code>，里面是一个名字列表。这是社交网站或应用最近非常流行的功能。
+ 当你发布<code>@昵称</code>的信息时，在这里的意思是“向某某人说”，对方能看到你说的话，并能够回复，实现一对一的沟通。
+            </fieldset>
+            <fieldset>
+                <legend>使用说明</legend>
+                TODO add summary here
+ 
+                <table class="table-doc">
+                    <col width="180"/>
+                    <col width="180"/>
+                    <tr>
+                        <th>名字</th><th>默认值</th> <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>配置参数</td>
+                        </tr><tr><td>at</td>   <td>"@"</td>   <td>默认的标识符</td>
+                        </tr><tr><td>datalist</td>   <td>[]</td>   <td>字符串数组，不可监控，(名字取自HTML的datalist同名元素)</td>
+                        </tr><tr><td>template</td>   <td>""</td>   <td> 弹出层的模板，如果为空，使用默认模板，注意要在上面添加点击或hover处理</td>
+                        </tr><tr><td>toggle</td>   <td>false</td>   <td>用于控制弹出层的显示隐藏</td>
+                        </tr><tr><td>activeIndex</td>   <td>0</td>   <td>弹出层里面要高亮的列表项的索引值</td>
+                        </tr><tr><td>query</td>   <td>""</td>   <td>@后的查询字符串</td>
+                        </tr><tr><td>limit</td>   <td>5</td>   <td> 弹出层里面总共有多少个列表项</td>
+                        </tr><tr><td>maxLength</td>   <td>20</td>   <td>@后的查询字符串的最大长度，注意中间不能有空格</td>
+                        </tr><tr><td>minLength</td>   <td>1</td>   <td>@后的查询字符串只有出现了多少个字符后才显示弹出层</td>
+                        </tr><tr><td>delay</td>   <td>500</td>   <td>我们是通过$update方法与后台进行AJAX连接，为了防止输入过快导致频繁，需要指定延时毫秒数
+远程更新函数,与后台进行AJAX连接，更新datalist，此方法有一个回调函数，里面将执行$filter、$highlight操作
+</td>
+                        </tr><tr><td>getTemplate</td>   <td>function(str,opts){...}</td>   <td>模板函数,方便用户自定义模板</td>
+                        </tr><tr><td>highlightData</td>   <td>function(item,str){...}</td>   <td>用于对_datalist中的字符串进行高亮处理，将得到的新数组赋给_datalist，实现弹出层的更新</td>
+                        </tr><tr>
+                        <td>接口方法与固有属性</td>
+                        </tr><tr><td>$remove()</td>   <td></td>   <td>当组件移出DOM树时,系统自动调用的销毁函数
+             </td>
+                        </tr><tr><td>_select(e)</td>   <td></td>   <td>test _select</td>
+                        </tr></table>
+            </fieldset>updateData是一个非常重要的配置项，用于与后端同步数据，下面是
+<pre class="brush:javascript;gutter:false;toolbar:false;">     function updateData(vmodel, callback) {
+         var model = vmodel.$model
+         jQuery.post("url", {
+             limit: model.limit,
+             query: model.query
+         }, function(data) {
+             vmodel.datalist = data.datalist
+             callback()
+         })
+     }</pre>
+     
+
+
+            <ul>
+                </ul>
+        </div>
+    </body>
+</html>
