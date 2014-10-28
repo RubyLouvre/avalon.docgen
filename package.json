@@ -1,4 +1,10 @@
 {
+  "name": "avalon-doc",
+  "version": "0.1.0",
+  "main": "doc.js",
+  "bin": {
+    "avalon.docgen": "doc.js"
+  },
   "dependencies": {
   }
 }

@@ -1,307 +1,333 @@
-var fs = require("fs")
-//用于抽取多行注释,注意第一行需要有两个*
-var rcomments = /\/\*\*([\s\S]+?)\*\//img
-var a = fs.createReadStream("at.js", {encoding: "utf8"})
-
-var body = "";
-a.on("data", function(chunk) {
-    body += chunk;
-})
-a.on("end", function() {
-    //收集多行注释
-    var sections = []
-    body.replace(rcomments, function(_, b) {
-        sections.push(b)
-        return _
-    })
-    //元数据对象
-    var hash = {}
-    //收集@后的元素数据
-    sections.forEach(function(text) {
-        getAtData(text, hash)
-    })
-    var trs = hash.trs = []
-    for (var i in hash) {
-        if (Array.isArray(hash[i]) && i !== "links") {
-            trs.push({
-                span: paramNames[i]
-            })
-            trs.push.apply(trs, hash[i])
-        }
-    }
-
-    console.log(hash)
-
-    fs.createWriteStream('file.txt').write(body, "utf8")
-
-    //console.log(body);
-})
-var rhasAt = /\@(\w+)/
-//从每个符合的多行注释中取得有效的元数据
-function getAtData(source, hash) {
-    if (rhasAt.test(source)) {
-        var lines = source.split(/\r?\n/)
-        var paramName
-        source = lines.map(function(line) {
-            line = line.replace(/^\s*\*/, "")
-            if (line.match(rhasAt)) {
-                paramName = RegExp.$1
-                var paramValue = line.replace(rhasAt, "")
-                var hook = dataHooks[paramName]
-                hook && hook(paramName, paramValue, hash)
-            } else {
-                var value = line.trim()
-                if (value) {
-                    var hook = dataHooks[paramName]
-                    hook && hook(paramName, value, hash)
-                } else {
-                    paramName = void 0
-                }
-            }
-        })
-    }
-}
-function addOne(name, value, hash) {
-    if (!hash[name]) {
-        hash[name] = value.trim()
-    }
-}
-function addLongText(name, value, hash) {
-    if (name in hash) {
-        hash[name] = hash[name] + "<br/>" + value.trim()
-    } else {
-        hash[name] = value.trim()
-    }
-}
-var paramNames = {
-    config: "配置项（用户可以调整）",
-    interface: "固有接口（用户不可改变）"
-}
-function addParams(name, value, hash) {
-    if (!(name in hash)) {
-        hash[name] = []
-    }
-    var match = value.match(rparamName)
-    if (match) {
-        var pname = match[0]
-        value = value.replace(rparamName, "").replace(/^\s+/, "")
-        var array = value.split(";")
-        var defaultValue = array.shift()
-        var explain = array.join("")
-        hash[name].push({
-            name: pname,
-            defaultValue: defaultValue,
-            explain: explain
-        })
-    } else {
-        var array = hash[name]
-        var last = array[array.length - 1]
-        if (last) {
-            last.explain += explain
-        }
-    }
-}
-
-var rlink = /\[([^\]]+)]\((\w+)\)/
-var rparamName = /\w+(\([^\)]*\))?/
-
-var dataHooks = {
-    cnName: addOne,
-    enName: addOne,
-    introduce: addLongText,
-    config: addParams,
-    "interface": addParams,
-    links: function(name, value, hash) {
-        if (!(name in hash)) {
-            hash.links = []
-        }
-        var match = value.match(rlink)
-        if (match) {
-            hash.links.push({
-                link: match[1],
-                text: match[2]
-            })
-        }
-    }
-}
+#!/usr/bin/env node
+"use strict";
 /**
- 
- 添加@cnName, @enName, @description的注释如下，它们一般放在最前，@description比较长，可以跨行，但行与行之间不能存在空行
- /**
- * @cnName avalon类似新浪微博的@提示组件
- * @enName at
- * @description
- *    经常使用微博的人会发现，当我们在输入框输入@然后敲一个人的名字，会弹出一个<code>tip提示层</code>，里面是一个名字列表。
- *    这是社交网站或应用最近非常流行的功能。
- *     当你发布<code>@昵称</code>的信息时，在这里的意思是“向某某人说”，对方能看到你说的话，并能够回复，实现一对一的沟通。
- * /
- 
- 
- /**
- @param at {"@"} 默认的标识符
- *  /
- at: "@",
- 
- 添加links的注释为(它一般放在最后)
- /**
- @links 
- [例子1](avalon.at.ex1.html)
- [例子2](avalon.at.ex2.html)
- [例子3](avalon.at.ex3.html)
- * /
- 
- 
- 
- 
+ * Avalon widget doc generator
+ *
+ * 扫描为 vm.someName = someValue， 以及 widget.defaults = {someName: someValue}指定的@config或@interface注释
+ *
+ *
+ * @author kyrios.li
+ *
  */
+var esprima = require('./esprima'),
+    fs = require('fs'),
+    js_beautify = require('./js_beautify').js_beautify;
+// end import modules
+var tmpl = require('./ejs').compile(fs.readFileSync(__dirname + '/template.html', 'utf8'), {
+    open: '<%', close: '%>'
+});
 
-var ejs = (function() {
-//文本，数据，配置项，后项是默认使用<% %>
-    var EJS = function(source, data, opts) {
-        var fn = EJS.compile(source, opts);
-        return fn(data)
+exports.main = function (path) {
+    // read all directories
+    fs.readdirSync(path).forEach(function (fileName) {
+        if (!/^\w+$/.exec(fileName)) return;
+        var filePath = path + '/' + fileName,
+            stat = fs.statSync(filePath);
+        if (!stat.isDirectory()) {
+            return;
+        }
+        // Assume extension name is fileName, try to find "avalon.{extension}.js"
+        handleExtension(filePath, fileName);
+
+    });
+
+};
+
+exports.handleExtension = handleExtension;
+
+function handleExtension(dir, name) {
+    console.log('docgen avalon.' + name + '.js');
+    var content, program;
+    try {
+        content = fs.readFileSync(dir + '/avalon.' + name + '.js', 'utf8');
+        program = esprima.parse(content, {
+            range: true,
+            raw: true,
+            comment: true
+        });
+    } catch (e) {
+        return;
     }
+    // get names from first comment.
+    var comments = program.comments, index = 0,
+        TYPE_LINE = 'Line', TYPE_BLOCK = 'Block';
+    if (!comments.length) {
+        return;
+    }
+    var data = {
+        cnName: name,
+        enName: name,
+        introduce: 'TODO: add introduce',
+        trs: [],
+        links: []
+    };
+    var firstBlock = comments[0];
+    if (firstBlock.type !== TYPE_BLOCK) {
+        firstBlock = comments[1];
+        index = 1;
+    }
+    // assert.ok(firstBlock.type === TYPE_BLOCK, 'found block');
+    var lines = firstBlock.value.replace(/^\*|[\t ]*\*\s*|\s*\*$/g, '').split('\n@');
+    lines.forEach(function (line) {
+        var mKey = /(\w+)\s*/.exec(line);
+        if (mKey) {
+            data[mKey[1]] = line.substr(mKey[0].length);
+        }
+    });
 
-//如果第二配置对象指定了tid，则使用它对应的编译模板
-    EJS.compile = function(source, opts) {
-        opts = opts || {}
-        var tid = opts.tid
-        if (typeof tid === "string" && typeof EJS.cache[tid] == "function") {
-            return EJS.cache[tid];
-        }
-        var open = opts.open ? "<%" : "<&";
-        var close = opts.close ? "%>" : "&>";
-        var helperNames = [], helpers = []
-        for (var name in opts) {
-            if (opts.hasOwnProperty(name) && typeof opts[name] == "function") {
-                helperNames.push(name)
-                helpers.push(opts[name])
-            }
-        }
-        var flag = true; //判定是否位于前定界符的左边
-        var codes = []; //用于放置源码模板中普通文本片断
-        var time = new Date * 1; // 时间截,用于构建codes数组的引用变量
-        var prefix = " ;r += txt" + time + "[" //渲染函数输出部分的前面
-        var postfix = "];"//渲染函数输出部分的后面
-        var t = "return function(data){'use strict'; try{var r = '',line" + time + " = 0;"; //渲染函数的最开始部分
-        var rAt = /(^|[^\w\u00c0-\uFFFF_])(@)(?=\w)/g;
-        var rstr = /(['"])(?:\\[\s\S]|[^\ \\r\n])*?\1/g // /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/
-        var rtrim = /(^-|-$)/g;
-        var rmass = /mass/
-        var js = []
-        var pre = 0, cur, code, trim
-        for (var i = 0, n = source.length; i < n; ) {
-            cur = source.indexOf(flag ? open : close, i);
-            if (cur < pre) {
-                if (flag) {//取得最末尾的HTML片断
-                    t += prefix + codes.length + postfix
-                    code = source.slice(pre + close.length);
-                    if (trim) {
-                        code = code.trim();
-                        trim = false;
-                    }
-                    codes.push(code);
-                } else {
-                    throw Error("发生错误了");
-                }
-                break;
-            }
-            code = source.slice(i, cur); //截取前后定界符之间的片断
-            pre = cur;
-            if (flag) {//取得HTML片断
-                t += prefix + codes.length + postfix;
-                if (trim) {
-                    code = code.trim();
-                    trim = false;
-                }
-                codes.push(code);
-                i = cur + open.length;
-            } else {//取得javascript罗辑
-                js.push(code)
-                t += ";line" + time + "=" + js.length + ";"
-                switch (code.charAt(0)) {
-                    case "="://直接输出
-                        code = code.replace(rtrim, function() {
-                            trim = true;
-                            return ""
+    var configs = [], interfaces = [];
+    // walk around program
+    program.body.some(function (stmt) {
+        if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'CallExpression' && stmt.expression.callee.name === 'define') { // calls define
+            var args = stmt.expression['arguments'],
+                lastArg = args [args.length - 1];
+            if (lastArg.type === 'FunctionExpression') {
+                lastArg.body.body.forEach(function (stmt) {
+                    if (stmt.type === 'VariableDeclaration') { // find var widget = function()...
+                        stmt.declarations.forEach(function (decl) {
+                            if (decl.id.name === 'widget' && decl.init) {
+                                onVarWidget(decl.init);
+                            }
                         });
-                        code = code.replace(rAt, "$1data.");
-                        if (code.indexOf("|") > 1) {//使用过滤器
-                            var arr = [];
-                            var str = code.replace(rstr, function(str) {
-                                arr.push(str); //先收拾所有字符串字面量
-                                return 'mass';
-                            }).replace(/\|\|/g, "@"); //再收拾所有短路或
-                            if (str.indexOf("|") > 1) {
-                                var segments = str.split("|")
-                                var filtered = segments.shift().replace(/\@/g, "||").replace(rmass, function() {
-                                    return arr.shift();
-                                });
-                                for (var filter; filter = arr.shift(); ) {
-                                    segments = filter.split(":");
-                                    name = segments[0];
-                                    args = "";
-                                    if (segments[1]) {
-                                        args = ', ' + segments[1].replace(rmass, function() {
-                                            return arr.shift(); //还原
-                                        })
-                                    }
-                                    filtered = "EJS.filters." + name + "(" + filtered + args + ")"
-                                }
-                                code = "=" + filtered;
+                    } else if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'AssignmentExpression') {
+                        // find widget.defaults =
+                        var expr = stmt.expression;
+                        //console.log('assign', expr.left);
+                        if (expr.left.type === 'MemberExpression' && expr.left.object.name === 'widget' && expr.left.property.name === 'defaults') {
+                            var rval = expr.right;
+                            while (rval.type === 'AssignmentExpression') {
+                                rval = rval.right;
+                            }
+                            if (rval.type === 'ObjectExpression') {
+                                onAssignWidgetDefaults(rval.properties);
                             }
                         }
-                        t += " ;r +" + code + ";"
-                        break;
-                    case "#"://注释,不输出
-                        break
-                    case "-":
-                    default://普通逻辑,不输出
-                        code = code.replace(rtrim, function() {
-                            trim = true;
-                            return "";
-                        });
-                        t += code.replace(rAt, "$1data.");
-                        break;
-                }
-                i = cur + close.length;
+                    }
+                });
             }
-            flag = !flag;
+            return true; // End program.body.some()
         }
-        t += " return r; }catch(e){ EJS.log(e);\nEJS.log(js" + time + "[line" + time + "-1]) }}"
-        var body = ["txt" + time, "js" + time, "filters"]
-        var fn = Function.apply(Function, body.concat(helperNames, t));
-        var args = [codes, js, EJS.filters];
-        var compiled = fn.apply(this, args.concat(helpers));
-        if (typeof tid === "string") {
-            return  EJS.cache[tid] = compiled;
-        }
-        return compiled;
+    });
+
+    function onVarWidget(expr) {
+        while (expr.type === 'AssignmentExpression') {
+            expr = expr.right;
+        }// widget = function(elem, data, vmodels)
+        // find define expression
+        expr.body.body.forEach(function (stmt) {
+            if (stmt.type === 'VariableDeclaration') {
+                stmt.declarations.forEach(function (decl) {
+                    if (decl.id.name === 'vmodel' && decl.init) {
+                        var init = decl.init;
+                        if (init.type === 'CallExpression' && init.callee.type === 'MemberExpression' &&
+                            init.callee.object.name === 'avalon' && init.callee.property.name === 'define') {
+                            // avalon.define
+                            var args = init['arguments'], cb = args[args.length - 1];
+                            onVarVmodel(cb.params[0].name, cb.body.body);
+                        }
+                    }
+                });
+            }
+        });
     }
-    EJS.log = function(s) {
-        if (typeof console == "object") {
-            console.log(s);
+
+    function onVarVmodel(vm, body) {
+        // assert.ok(expr.type === 'CallExpression'
+        body.forEach(function (stmt, i) {
+            var expr = stmt.type === 'ExpressionStatement' && stmt.expression;
+            if (expr && expr.type === 'AssignmentExpression' &&
+                expr.left.type === 'MemberExpression' && expr.left.object.name === vm) {
+                var rval = expr.right;
+                while (rval.type === 'AssignmentExpression') {
+                    rval = rval.right;
+                }
+                var comment;
+                // find comment
+                if (comment = findCommentBefore(stmt.range[0])) {
+                    // find comment before assign expression
+                    onComment(expr.left.property.name, rval, comment);
+                } else if (rval.type === 'FunctionExpression' && (comment = findInlineCommentAfter(rval.body.range[0] + 1))) {
+                    // find comment after function decl
+                    onComment(expr.left.property.name, rval, comment);
+                }
+            }
+        });
+    }
+
+    function onAssignWidgetDefaults(properties) {
+        properties.forEach(function (prop) {
+            // find comment
+            //console.log('find comment for ' + prop.key.name, prop.range);
+            var comment;
+            if (comment = findCommentBefore(prop.range[0])) {
+                onComment(prop.key.name, prop.value, comment);
+            } else {
+                var propEnd = prop.range[1],
+                    m = /\s*,/.exec(content.substr(propEnd));
+                if (m) {
+                    propEnd += m[0].length;
+                }
+                if (comment = findInlineCommentAfter(propEnd)) {
+                    onComment(prop.key.name, prop.value, comment);
+                }
+            }
+
+        });
+    }
+
+    function onComment(name, expr, comment) {
+        //console.log(name, expr, comment);
+        var defaultVal;
+        if (expr.type === 'FunctionExpression') {
+            defaultVal = 'function(' + expr.params.map(function (param) {
+                return param.name
+            }).join() + '){...}'
+        } else {
+            defaultVal = content.substring(expr.range[0], expr.range[1])
+        }
+
+        if (comment.type === TYPE_BLOCK) {
+            comment.value.replace(/^\*|[\t ]*\*\s*|[\t ]*\*$/g, '').split('\n@').some(function (line) {
+                var mKey = /(\w+)\s*/.exec(line);
+                if (!mKey) return;
+                var key = mKey[1], value = line.substr(mKey[0].length);
+                if (key === 'config') {
+                    configs.push({
+                        name: name,
+                        defaultValue: defaultVal,
+                        explain: value
+                    });
+                    return true;
+                } else if (key === 'interface' && expr.type === 'FunctionExpression') {
+                    interfaces.push({
+                        name: name + '(' + expr.params.map(function (param) {
+                            return param.name
+                        }).join() + ')',
+                        defaultValue: '',
+                        explain: value
+                    });
+                    return true;
+                }
+            })
+
+        } else {
+            var mKey;
+            if (mKey = /^\s*@(config|interface)\s/.exec(comment.value)) {
+                var key = mKey[1], value = comment.value.substr(mKey[0].length);
+                if (key === 'config') {  // single line config
+                    configs.push({
+                        name: name,
+                        defaultValue: defaultVal,
+                        explain: value
+                    });
+                } else if (expr.type === 'FunctionExpression') {
+                    interfaces.push({
+                        name: name + '(' + expr.params.map(function (param) {
+                            return param.name
+                        }).join() + ')',
+                        defaultValue: '',
+                        explain: value
+                    })
+                }
+            }
         }
     }
-    EJS.cache = {}; //用于保存编译好的模板函数
-    EJS.filters = {//用于添加各种过滤器
-        escape: function(target) {
-            return target.replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#39;");
-        },
-        //还原为可被文档解析的HTML标签
-        unescape: function(target) {
-            return  target.replace(/&quot;/g, '"')
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>')
-                    .replace(/&amp;/g, "&"); //处理转义的中文和实体字符
-            return target.replace(/&#([\d]+);/g, function($0, $1) {
-                return String.fromCharCode(parseInt($1, 10));
+
+    function findCommentBefore(before) { //TODO: binary search
+        for (var i = 0, L = comments.length - 1; i < L; i++) {
+            if (comments[i].range[1] > before) break;
+        }
+        var comment = comments[i - 1];
+        if (comment && !content.substring(comment.range[1], before).trim()) {
+            // only blank
+            comments.splice(i, 1);
+            return comment;
+        }
+    }
+
+    function findInlineCommentAfter(after) { //TODO: binary search
+        for (var i = 0, L = comments.length; i < L; i++) {
+            if (comments[i].range[0] >= after) break;
+        }
+        if (i === L) return;
+        var comment = comments[i], gap = content.substring(after, comment.range[0]);
+        //console.log('  found comment after: ', after, gap);
+        if (comment.type === TYPE_LINE && !gap.trim() && gap.indexOf('\n') === -1) {
+            // only blank
+            comments.splice(i, 1);
+            return comment;
+        }
+    }
+
+
+    comments.forEach(function (comment) {
+        if (comment.type === TYPE_BLOCK) { // block comment
+            var lines = comment.value.replace(/^\*|[\t ]*\*\s*|\s*\*$/g, '').split('\n@');
+            lines.some(function (line) {
+                var mKey = /(\w+)\s*/.exec(line);
+                if (!mKey) return;
+                var key = mKey[1], value = line.substr(mKey[0].length);
+                if (key === 'config') {
+                } else if (key === 'interface') {
+                } else if (key === 'links') {
+                    var rLink = /\[(.+?)\]\((.+?)\)/g, m;
+                    while (m = rLink.exec(value)) {
+                        data.links.push({text: m[1], href: m[2]});
+                    }
+                } else { // others
+                    data[key] = filterValue(value);
+                }
             });
+        } else { // line comment
+            var mKey;
+            if (mKey = /^\s*@(config|interface)\s/.exec(comment.value)) {
+                var key = mKey[1], value = comment.value.substr(mKey[0].length);
+                if (key === 'config') {  // single line config
+                } else {
+                }
+            }
+
         }
-    };
-    return EJS;
-})()
+    });
+
+    if (configs.length) {
+        data.trs = data.trs.concat({span: '配置参数'}, configs);
+    }
+    if (interfaces.length) {
+        data.trs = data.trs.concat({span: '接口方法与固有属性'}, interfaces);
+    }
+
+    //console.log(data);
+    var result = tmpl(data);
+    fs.writeFile(dir + '/avalon.' + name + '.doc.html', result);
+    //console.log(tmpl(data));
+
+    function filterValue(value) {
+        return value.replace(/```(\w+)?\n([\w\W]*?)```/g, function (m, lang, content) {
+            if (lang === 'js')lang = 'javascript';
+            if (lang === 'html') {
+                //TODO: escape html
+            } else if (lang === 'javascript') {
+                // beautify
+                content = js_beautify(content);
+            }
+            return '<pre class="brush:' + lang + ';gutter:false;toolbar:false;">' + content + '</pre>';
+        });
+    }
+}
+if (process.mainModule === module) {
+    if (process.argv.length === 2) {
+        exports.main(".");
+    } else {
+        var path = process.argv[2],
+            m = /(^|\/|\\)avalon\.(\w+)\.js$/.exec(path);
+        if (m) {
+            var dir = m[1] ? path.substr(0, path.length - m[0].length) : '.';
+            exports.handleExtension(dir, m[2]);
+        } else if (fs.statSync(path).isDirectory()) {
+            exports.main(path);
+        } else {
+            console.log('Usage: avalon.docgen [path|js file]');
+        }
+    }
+}
