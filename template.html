@@ -4,7 +4,7 @@
         <title><%= @cnName %></title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width">
-        <meta name="@introduce" content="<%= @description  %>" />
+        <meta name="descriptions" content="<%= @introduce %>" />
         <link type="text/css" rel="stylesheet" href="../style/avalon.doc.css"/>
     </head>
     <body>
@@ -12,7 +12,7 @@
             <h2><%= @enName %></h2>
             <fieldset>
                 <legend><%= @cnName %></legend>
-                <%= @@introduce %>
+                <%= @introduce %>
             </fieldset>
             <fieldset>
                 <legend>使用说明</legend>
@@ -22,7 +22,7 @@
                     <col width="180"/>
                     <tr>
                         <th>名字</th><th>默认值</th> <th>说明</th>
-                    </tr> 
+                    </tr>
                     <%- for(var i=0, n = @trs.length, tr; i < n; i++){ -%>
                     <tr>
                         <% tr = @trs[i] -%>
@@ -31,10 +31,13 @@
                         <%- } else {-%>
                         <td><%= tr.name %></td>   <td><%= tr.defaultValue %></td>   <td><%= tr.explain %></td>
                         <%- } -%>
-                    </tr> 
+                    </tr>
                     <%- } -%>
                 </table>
             </fieldset>
+            <%= @other%>
+
+
             <ul>
                 <%- for(var i=0, n = @links.length, link; i < n; i++){ -%>
                 <- link = @links[i] ->
