@@ -424,3 +424,9 @@ define(["avalon", "text!./avalon.at.html", "css!../chameleon/oniui-common.css", 
  http://www.cnblogs.com/haogj/p/3376874.html
  */
 
+/**
+ @links
+ [例子1](avalon.at.ex1.html)
+ [例子2](avalon.at.ex2.html)
+ [例子3](avalon.at.ex3.html)
+ */

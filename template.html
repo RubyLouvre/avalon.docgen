@@ -21,7 +21,9 @@
                     <col width="180"/>
                     <col width="180"/>
                     <tr>
-                        <th>名字</th><th>默认值</th> <th>说明</th>
+                        <th>名字</th>
+                        <th>默认值</th>
+                        <th>说明</th>
                     </tr>
                     <%- for(var i=0, n = @trs.length, tr; i < n; i++){ -%>
                     <tr>
@@ -40,7 +42,7 @@
 
             <ul>
                 <%- for(var i=0, n = @links.length, link; i < n; i++){ -%>
-                <- link = @links[i] ->
+                <%- link = @links[i] -%>
                 <li><a href="<%= link.href %>"><%= link.text %></a></li>
                 <%- } -%>
             </ul>
