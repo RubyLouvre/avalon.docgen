@@ -74,8 +74,8 @@ function addLongText(name, value, hash) {
     }
 }
 var paramNames = {
-    param: "配置项（用户可以调整）",
-    innate: "固有接口（用户不可改变）"
+    config: "配置项（用户可以调整）",
+    interface: "固有接口（用户不可改变）"
 }
 function addParams(name, value, hash) {
     if (!(name in hash)) {
@@ -108,9 +108,9 @@ var rparamName = /\w+(\([^\)]*\))?/
 var dataHooks = {
     cnName: addOne,
     enName: addOne,
-    description: addLongText,
-    param: addParams,
-    innate: addParams,
+    introduce: addLongText,
+    config: addParams,
+    "interface": addParams,
     links: function(name, value, hash) {
         if (!(name in hash)) {
             hash.links = []
