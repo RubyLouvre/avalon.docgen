@@ -8,7 +8,7 @@ avalon.oniui的注释文档生成器
 
 #### 安装
 
-    $ npm install https://github.com/RubyLouvre/avalon.docgen.git -g
+    $ npm install git+https://github.com/RubyLouvre/avalon.docgen.git -g
 
 #### 运行
 
