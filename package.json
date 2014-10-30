@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "main": "doc.js",
   "bin": {
-    "avalon.docgen": "doc.js"
+    "avalon-doc": "doc.js"
   },
   "dependencies": {
   }
