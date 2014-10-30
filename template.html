@@ -31,13 +31,27 @@
                         <% if(tr.span){ %>
                         <td><%= tr.span %></td>
                         <%- } else {-%>
-                        <td><%= tr.name %></td>   <td><%= tr.defaultValue %></td>   <td><%= tr.explain %></td>
+                        <td><%= tr.name %></td>   <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
+                        <% if (tr.params && tr.params.length){ %>
+                            <table>
+                                <tr><th>参数名/返回值</th><th>类型</th><th>说明</th></tr>
+                                <%- for(var j=0, plen=tr.params.length, p; j < plen; j++){
+                                    p=tr.params[j] -%>
+                                <tr><td><%= p.name %></td><td><%= p.type %></td><td><%= p.desc %></td></tr>
+                                <% } %>
+                            </table>
+                        <% } %>
+
+                    </td>
                         <%- } -%>
                     </tr>
                     <%- } -%>
                 </table>
             </fieldset>
-            <%= @other%>
+            <%- for(var i=0, n = @others.length, other; i < n; i++){
+                other = @others[i] -%>
+            <div class="others"><%= other %></div>
+            <% } %>
 
 
             <ul>
