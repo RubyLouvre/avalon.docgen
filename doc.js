@@ -11,7 +11,8 @@
  */
 var esprima = require('./esprima'),
     fs = require('fs'),
-    js_beautify = require('./js_beautify').js_beautify;
+    js_beautify = require('./js_beautify').js_beautify,
+    html_beautify = require('./html_beautify').style_html;
 // end import modules
 var tmpl = require('./ejs').compile(fs.readFileSync(__dirname + '/template.html', 'utf8'), {
     open: '<%', close: '%>'
@@ -312,7 +313,9 @@ function handleExtension(dir, name) {
     }
 
     //console.log(data);
-    var result = tmpl(data);
+    var result = html_beautify(tmpl(data), {
+        unformatted: ['pre']
+    });
     fs.writeFile(dir + '/avalon.' + name + '.doc.html', result);
     //console.log(tmpl(data));
 
