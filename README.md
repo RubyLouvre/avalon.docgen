@@ -29,7 +29,7 @@ avalon.oniui的注释文档生成器
 
 二、指定目录
 
-    $ avalon-doc /home/workspace/oniui/
+    $ avalon-doc /home/workspace/oniui
 
 扫描指定目录下的所有目录
 
@@ -39,4 +39,3 @@ avalon.oniui的注释文档生成器
 
     $ avalon-doc at/avalon.at.js
 
-在指定输入文件

@@ -320,7 +320,7 @@ define(["avalon", "text!./avalon.at.html", "css!../chameleon/oniui-common.css", 
         /**
          * @config 用于对_datalist中的字符串进行高亮处理，将得到的新数组赋给_datalist，实现弹出层的更新
          * @param items {String} datalist中的每一项
-         * @returns str {String} 查询字符串
+         * @returns {String} 查询字符串
          */
         highlightData: function(item, str) {
             var query = escapeRegExp(str)
@@ -405,8 +405,10 @@ define(["avalon", "text!./avalon.at.html", "css!../chameleon/oniui-common.css", 
     return avalon
 })
 /*
+@other
  //updateData的例子，里面是一个AJAX回调，成功后更新VM的datalist，并执行回调
- 
+
+```js
  function updateData(vmodel, callback){ 
  var model = vmodel.$model
  jQuery.post("url", { limit: model.limit, query: model.query}, function(data){
@@ -414,7 +416,7 @@ define(["avalon", "text!./avalon.at.html", "css!../chameleon/oniui-common.css", 
  callback()
  })
  }
- 
+```
  
  
  **/

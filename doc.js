@@ -59,7 +59,8 @@ function handleExtension(dir, name) {
         enName: name,
         introduce: 'TODO: add introduce',
         trs: [],
-        links: []
+        links: [],
+        others: []
     };
     var firstBlock = comments[0];
     if (firstBlock.type !== TYPE_BLOCK) {
@@ -177,36 +178,52 @@ function handleExtension(dir, name) {
 
     function onComment(name, expr, comment) {
         //console.log(name, expr, comment);
-        var defaultVal;
+        var defaultVal, params;
         if (expr.type === 'FunctionExpression') {
-            defaultVal = 'function(' + expr.params.map(function (param) {
+            name = name + '(' + expr.params.map(function (param) {
                 return param.name
-            }).join() + '){...}'
+            }).join() + ')';
+            defaultVal = '';
         } else {
             defaultVal = content.substring(expr.range[0], expr.range[1])
         }
 
+        var obj, type;
+
         if (comment.type === TYPE_BLOCK) {
-            comment.value.replace(/^\*|[\t ]*\*\s*|[\t ]*\*$/g, '').split('\n@').some(function (line) {
+            comment.value.replace(/^\*|[\t ]*\*\s*|[\t ]*\*$/g, '').split('\n@').forEach(function (line) {
                 var mKey = /(\w+)\s*/.exec(line);
                 if (!mKey) return;
                 var key = mKey[1], value = line.substr(mKey[0].length);
-                if (key === 'config') {
-                    configs.push({
+                if (key === 'config' || key === 'interface') {
+                    obj = {
                         name: name,
                         defaultValue: defaultVal,
-                        explain: value
-                    });
-                    return true;
-                } else if (key === 'interface' && expr.type === 'FunctionExpression') {
-                    interfaces.push({
-                        name: name + '(' + expr.params.map(function (param) {
-                            return param.name
-                        }).join() + ')',
-                        defaultValue: '',
-                        explain: value
-                    });
-                    return true;
+                        explain: value,
+                        params: params
+                    };
+                    type = key;
+                } else if (obj && key === 'param') {
+                    var mParam = /^(\w*)\s*(?:\{(\w+)\})?\s*(.*)/.exec(value);
+                    if (mParam) {
+                        (obj.params || (obj.params = [])).push({
+                            name: mParam[1],
+                            type: mParam[2] || '',
+                            desc: mParam[3]
+                        });
+                    }
+                } else if (obj && key === 'returns') {
+                    mParam = /^(?:\{(\w+)\})?\s*(.*)/.exec(value);
+                    if (mParam) {
+                        (obj.params || (obj.params = [])).push({
+                            name: '返回',
+                            type: mParam[1] || '',
+                            desc: mParam[2]
+                        });
+                    }
+                    obj.returns = value
+                } else {
+                    console.log('thrown comment line', key);
                 }
             })
 
@@ -214,23 +231,18 @@ function handleExtension(dir, name) {
             var mKey;
             if (mKey = /^\s*@(config|interface)\s/.exec(comment.value)) {
                 var key = mKey[1], value = comment.value.substr(mKey[0].length);
-                if (key === 'config') {  // single line config
-                    configs.push({
+                if (key === 'config' || key === 'interface') {  // single line config
+                    obj = {
                         name: name,
                         defaultValue: defaultVal,
                         explain: value
-                    });
-                } else if (expr.type === 'FunctionExpression') {
-                    interfaces.push({
-                        name: name + '(' + expr.params.map(function (param) {
-                            return param.name
-                        }).join() + ')',
-                        defaultValue: '',
-                        explain: value
-                    })
+                    };
+                    type = key;
                 }
             }
         }
+        if (type === 'config') configs.push(obj);
+        else if (type === 'interface') interfaces.push(obj);
     }
 
     function findCommentBefore(before) { //TODO: binary search
@@ -274,8 +286,10 @@ function handleExtension(dir, name) {
                     while (m = rLink.exec(value)) {
                         data.links.push({text: m[1], href: m[2]});
                     }
+                } else if (key === 'other') {
+                    data.others.push(filterValue(value));
                 } else { // others
-                    data[key] = filterValue(value);
+                    data[key] = value;
                 }
             });
         } else { // line comment
