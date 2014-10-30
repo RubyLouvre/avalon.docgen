@@ -317,7 +317,7 @@ function handleExtension(dir, name) {
     //console.log(tmpl(data));
 
     function filterValue(value) {
-        return value.replace(/```(\w+)?\n([\w\W]*?)```/g, function (m, lang, content) {
+        return value.replace(/```(\w+)?\r?\n([\w\W]*?)```/g, function (m, lang, content) {
             if (lang === 'js')lang = 'javascript';
             if (lang === 'html') {
                 //TODO: escape html
