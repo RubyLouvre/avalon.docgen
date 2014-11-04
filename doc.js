@@ -37,7 +37,6 @@ exports.main = function (path) {
 exports.handleExtension = handleExtension;
 
 function handleExtension(dir, name) {
-    console.log('docgen avalon.' + name + '.js');
     var content, program;
     try {
         content = fs.readFileSync(dir + '/avalon.' + name + '.js', 'utf8');
@@ -49,6 +48,7 @@ function handleExtension(dir, name) {
     } catch (e) {
         return;
     }
+    console.log('docgen avalon.' + name + '.js');
     // get names from first comment.
     var comments = program.comments, index = 0,
         TYPE_LINE = 'Line', TYPE_BLOCK = 'Block';
@@ -334,6 +334,8 @@ function handleExtension(dir, name) {
 }
 if (process.mainModule === module) {
     if (process.argv.length === 2) {
+        console.log('Usage: avalon-doc [directory|js file|--all]');
+    } else if (process.argv[2] === '--all') {
         exports.main(".");
     } else {
         var path = process.argv[2],
@@ -342,9 +344,11 @@ if (process.mainModule === module) {
             var dir = m[1] ? path.substr(0, path.length - m[0].length) : '.';
             exports.handleExtension(dir, m[2]);
         } else if (fs.statSync(path).isDirectory()) {
-            exports.main(path);
+            //exports.main(path);
+            if (path[path.length - 1] === '/') path = path.substr(0, path.length - 1);
+            exports.handleExtension(path, path.substr(path.lastIndexOf('/') + 1));
         } else {
-            console.log('Usage: avalon.docgen [path|js file]');
+            console.log('Usage: avalon-doc [directory|js file|--all]');
         }
     }
 }

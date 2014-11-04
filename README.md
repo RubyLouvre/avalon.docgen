@@ -12,9 +12,9 @@ avalon.oniui的注释文档生成器
 
 #### 运行
 
-一、没有参数
+一、扫描当前目录
 
-    $ avalon-doc
+    $ avalon-doc --all
 
 扫描当前目录下所有目录，并查找是否存在avalon组件，并生成文档。组件命名规则及生成文件目录格式为：
 
@@ -29,9 +29,9 @@ avalon.oniui的注释文档生成器
 
 二、指定目录
 
-    $ avalon-doc /home/workspace/oniui
+    $ avalon-doc /home/workspace/oniui/at
 
-扫描指定目录下的所有目录
+以指定目录的目录名为组件名，执行生成
 
 ---
 
