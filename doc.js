@@ -35,6 +35,16 @@ exports.main = function (path) {
 };
 
 exports.handleExtension = handleExtension;
+//移除无用的HTML标签
+function trimHTML (v) {
+        v = String(v);
+        var regexp = /<("[^"]*"|'[^']*'|[^'">])*>/gi;
+        if (v) {
+            v = v.replace(regexp,"");
+            return (v && v !== '&nbsp;' && v !== '&#160;') ? v.replace(/\"/g,"'") : "";
+        } 
+            return v;
+    }
 
 function handleExtension(dir, name) {
     var content, program;
