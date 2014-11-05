@@ -22,16 +22,18 @@
             </fieldset>
             <fieldset>
                 <legend>使用说明</legend>TODO add summary here
-                <table class="table-doc">
-                    <col width="180" />
-                    <col width="180" />
+                <table class="table-doc" border="1">
+                    <colgroup>
+                        <col width="180" />
+                        <col width="180" />
+                    </colgroup>
                     <tr>
                         <th>名字</th>
                         <th>默认值</th>
                         <th>说明</th>
                     </tr>
                     <tr>
-                        <td>配置参数</td>
+                        <td align="center" colspan="3">配置参数</td>
                     </tr>
                     <tr>
                         <td>at</td>
@@ -87,7 +89,7 @@
                         <td>getTemplate(str,opts)</td>
                         <td></td>
                         <td>模板函数,方便用户自定义模板
-                            <table>
+                            <table border="1">
                                 <tr>
                                     <th>参数名/返回值</th>
                                     <th>类型</th>
@@ -115,7 +117,7 @@
                         <td>highlightData(item,str)</td>
                         <td></td>
                         <td>用于对_datalist中的字符串进行高亮处理，将得到的新数组赋给_datalist，实现弹出层的更新
-                            <table>
+                            <table border="1">
                                 <tr>
                                     <th>参数名/返回值</th>
                                     <th>类型</th>
@@ -135,7 +137,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>接口方法与固有属性</td>
+                        <td align="center" colspan="3">接口方法与固有属性</td>
                     </tr>
                     <tr>
                         <td>$remove()</td>

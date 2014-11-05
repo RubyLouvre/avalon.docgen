@@ -36,15 +36,15 @@ exports.main = function (path) {
 
 exports.handleExtension = handleExtension;
 //移除无用的HTML标签
-function trimHTML (v) {
-        v = String(v);
-        var regexp = /<("[^"]*"|'[^']*'|[^'">])*>/gi;
-        if (v) {
-            v = v.replace(regexp,"");
-            return (v && v !== '&nbsp;' && v !== '&#160;') ? v.replace(/\"/g,"&quot;") : "";
-        } 
-            return v;
+function trimHTML(v) {
+    v = String(v);
+    var regexp = /<("[^"]*"|'[^']*'|[^'">])*>/gi;
+    if (v) {
+        v = v.replace(regexp, "");
+        return (v && v !== '&nbsp;' && v !== '&#160;') ? v.replace(/\"/g, "&quot;") : "";
     }
+    return v;
+}
 
 function handleExtension(dir, name) {
     var content, program;
@@ -300,6 +300,9 @@ function handleExtension(dir, name) {
                 } else if (key === 'other') {
                     data.others.push(filterValue(value));
                 } else { // others
+                    if (key === 'introduce') {
+                        value = filterValue(value);
+                    }
                     data[key] = value;
                 }
             });
@@ -323,7 +326,7 @@ function handleExtension(dir, name) {
     }
 
     //console.log(data);
-    data.introduceInHead = trimHTML(data.introduce.substr(0,300));
+    data.introduceInHead = trimHTML(data.introduce.substr(0, 300));
     var result = html_beautify(tmpl(data), {
         unformatted: ['pre']
     });

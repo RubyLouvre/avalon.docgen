@@ -17,9 +17,11 @@
             <fieldset>
                 <legend>使用说明</legend>
                 <%= @summary %>
-                <table class="table-doc">
-                    <col width="180"/>
-                    <col width="180"/>
+                <table class="table-doc" border="1">
+                    <colgroup>
+                        <col width="180"/>
+                        <col width="180"/>
+                    </colgroup>
                     <tr>
                         <th>名字</th>
                         <th>默认值</th>
@@ -29,11 +31,11 @@
                     <tr>
                         <% tr = @trs[i] -%>
                         <% if(tr.span){ %>
-                        <td><%= tr.span %></td>
+                        <td align="center" colspan="3"><%= tr.span %></td>
                         <%- } else {-%>
                         <td><%= tr.name %></td>   <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
                         <% if (tr.params && tr.params.length){ %>
-                            <table>
+                            <table border="1">
                                 <tr><th>参数名/返回值</th><th>类型</th><th>说明</th></tr>
                                 <%- for(var j=0, plen=tr.params.length, p; j < plen; j++){
                                     p=tr.params[j] -%>
