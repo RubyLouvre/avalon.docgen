@@ -41,7 +41,7 @@ function trimHTML (v) {
         var regexp = /<("[^"]*"|'[^']*'|[^'">])*>/gi;
         if (v) {
             v = v.replace(regexp,"");
-            return (v && v !== '&nbsp;' && v !== '&#160;') ? v.replace(/\"/g,"'") : "";
+            return (v && v !== '&nbsp;' && v !== '&#160;') ? v.replace(/\"/g,"&quot;") : "";
         } 
             return v;
     }
@@ -323,6 +323,7 @@ function handleExtension(dir, name) {
     }
 
     //console.log(data);
+    data.introduceInHead = trimHTML(data.introduce.substr(0,300));
     var result = html_beautify(tmpl(data), {
         unformatted: ['pre']
     });
