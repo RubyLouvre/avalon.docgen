@@ -69,10 +69,10 @@ function handleExtension(dir, name) {
         cnName: name,
         enName: name,
         introduce: 'TODO: add introduce',
+        summary:"",
         trs: [],
         links: [],
-        others: [],
-        summary: ''
+        others: []
     };
     var firstBlock = comments[0];
     if (firstBlock.type !== TYPE_BLOCK) {

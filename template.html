@@ -6,8 +6,7 @@
         <meta name="viewport" content="width=device-width">
         <meta name="descriptions" content="<%= @introduceInHead %>" />
         <link type="text/css" rel="stylesheet" href="../style/avalon.doc.css"/>
-        <script src="../highlight/shCore.js">
-    </script>
+        <script src="../highlight/shCore.js"></script>
     </head>
     <body>
         <div class="wrapper">
@@ -58,7 +57,7 @@
             <% } %>
 
 
-            <ul>
+            <ul class="example-links">
                 <%- for(var i=0, n = @links.length, link; i < n; i++){ -%>
                 <%- link = @links[i] -%>
                 <li><a href="<%= link.href %>"><%= link.text %></a></li>
