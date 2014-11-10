@@ -71,7 +71,8 @@ function handleExtension(dir, name) {
         introduce: 'TODO: add introduce',
         trs: [],
         links: [],
-        others: []
+        others: [],
+        summary: ''
     };
     var firstBlock = comments[0];
     if (firstBlock.type !== TYPE_BLOCK) {
@@ -105,7 +106,7 @@ function handleExtension(dir, name) {
                         // find widget.defaults =
                         var expr = stmt.expression;
                         //console.log('assign', expr.left);
-                        if (expr.left.type === 'MemberExpression' && expr.left.object.name === 'widget' && expr.left.property.name === 'defaults') {
+                        if (expr.left.type === 'MemberExpression' && expr.left.property.name === 'defaults') {
                             var rval = expr.right;
                             while (rval.type === 'AssignmentExpression') {
                                 rval = rval.right;
@@ -114,12 +115,26 @@ function handleExtension(dir, name) {
                                 onAssignWidgetDefaults(rval.properties);
                             }
                         }
+                    } else if (stmt.type === 'FunctionDeclaration' && stmt.id.name.toLowerCase() === name) { // function Name(...)
+                        onConstructor(stmt.body.body);
                     }
                 });
             }
             return true; // End program.body.some()
         }
     });
+
+    function onConstructor(body) {
+        body.forEach(function (stmt) {
+            var expr = stmt.type === 'ExpressionStatement' && stmt.expression;
+            if (expr && expr.type === 'AssignmentExpression' &&
+                expr.left.type === 'MemberExpression' && expr.left.object.type === 'ThisExpression') {
+                // this.xxx = xxx
+                console.log('onAssign', expr.left.property.name);
+                onAssignment(expr);
+            }
+        });
+    }
 
     function onVarWidget(expr) {
         while (expr.type === 'AssignmentExpression') {
@@ -149,30 +164,38 @@ function handleExtension(dir, name) {
             var expr = stmt.type === 'ExpressionStatement' && stmt.expression;
             if (expr && expr.type === 'AssignmentExpression' &&
                 expr.left.type === 'MemberExpression' && expr.left.object.name === vm) {
-                var rval = expr.right;
-                while (rval.type === 'AssignmentExpression') {
-                    rval = rval.right;
-                }
-                var comment;
-                // find comment
-                if (comment = findCommentBefore(stmt.range[0])) {
-                    // find comment before assign expression
-                    onComment(expr.left.property.name, rval, comment);
-                } else if (rval.type === 'FunctionExpression' && (comment = findInlineCommentAfter(rval.body.range[0] + 1))) {
-                    // find comment after function decl
-                    onComment(expr.left.property.name, rval, comment);
-                }
+                onAssignment(expr);
             }
         });
+    }
+
+    function onAssignment(expr) {
+        var rval = expr.right;
+        while (rval.type === 'AssignmentExpression') {
+            rval = rval.right;
+        }
+        var propName = expr.left.property.name, comment;
+        // find comment
+        if (comment = findCommentBefore(expr.range[0])) {
+            // find comment before assign expression
+            onComment(propName, rval, comment);
+        } else if (comment = findInlineCommentAfter(expr.range[1])) {
+            onComment(propName, rval, comment);
+        } else if (rval.type === 'FunctionExpression' && (comment = findInlineCommentAfter(rval.body.range[0] + 1))) {
+            // find comment after function decl
+            onComment(propName, rval, comment);
+        }
     }
 
     function onAssignWidgetDefaults(properties) {
         properties.forEach(function (prop) {
             // find comment
             //console.log('find comment for ' + prop.key.name, prop.range);
-            var comment;
+            var propName = prop.key.name, comment;
             if (comment = findCommentBefore(prop.range[0])) {
-                onComment(prop.key.name, prop.value, comment);
+                onComment(propName, prop.value, comment);
+            } else if (prop.value.type === 'ObjectExpression' && (comment = findInlineCommentAfter(prop.value.range[0] + 1))) {
+                onComment(propName, null, comment);
             } else {
                 var propEnd = prop.range[1],
                     m = /\s*,/.exec(content.substr(propEnd));
@@ -180,7 +203,7 @@ function handleExtension(dir, name) {
                     propEnd += m[0].length;
                 }
                 if (comment = findInlineCommentAfter(propEnd)) {
-                    onComment(prop.key.name, prop.value, comment);
+                    onComment(propName, prop.value, comment);
                 }
             }
 
@@ -190,7 +213,9 @@ function handleExtension(dir, name) {
     function onComment(name, expr, comment) {
         //console.log(name, expr, comment);
         var defaultVal, params;
-        if (expr.type === 'FunctionExpression') {
+        if (!expr) {
+            defaultVal = '';
+        } else if (expr.type === 'FunctionExpression') {
             name = name + '(' + expr.params.map(function (param) {
                 return param.name
             }).join() + ')';
@@ -338,6 +363,7 @@ function handleExtension(dir, name) {
             if (lang === 'js')lang = 'javascript';
             if (lang === 'html') {
                 //TODO: escape html
+                content = html_beautify(content).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             } else if (lang === 'javascript') {
                 // beautify
                 content = js_beautify(content);
