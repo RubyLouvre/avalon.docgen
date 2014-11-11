@@ -21,10 +21,12 @@
                 <table class="table-doc" border="1">
                     <colgroup>
                         <col width="180"/>
+                        <col width="80"/>
                         <col width="180"/>
                     </colgroup>
                     <tr>
                         <th>名字</th>
+                        <th>类型</th>
                         <th>默认值</th>
                         <th>说明</th>
                     </tr>
@@ -32,9 +34,11 @@
                     <tr>
                         <% tr = @trs[i] -%>
                         <% if(tr.span){ %>
-                        <td align="center" colspan="3"><%= tr.span %></td>
+                        <td align="center" colspan="4"><%= tr.span %></td>
                         <%- } else {-%>
-                        <td><%= tr.name %></td>   <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
+                        <td><%= tr.name %></td>
+                        <td><%= tr.type %></td>
+                        <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
                         <% if (tr.params && tr.params.length){ %>
                             <table border="1">
                                 <tr><th>参数名/返回值</th><th>类型</th><th>说明</th></tr>
