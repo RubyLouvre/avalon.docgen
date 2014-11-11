@@ -41,6 +41,7 @@
                         <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
                         <% if (tr.params && tr.params.length){ %>
                             <table border="1">
+                                <col width="100"/><col width="70"/>
                                 <tr><th>参数名/返回值</th><th>类型</th><th>说明</th></tr>
                                 <%- for(var j=0, plen=tr.params.length, p; j < plen; j++){
                                     p=tr.params[j] -%>
