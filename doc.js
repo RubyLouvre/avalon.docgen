@@ -46,6 +46,8 @@ function trimHTML(v) {
     return v;
 }
 
+var rCommentSplitter = /^\*|\r?\n[\t ]*\*(?:\s*|$)/g;
+
 function handleExtension(dir, name) {
     var content, program;
     try {
@@ -69,24 +71,11 @@ function handleExtension(dir, name) {
         cnName: name,
         enName: name,
         introduce: 'TODO: add introduce',
-        summary:"",
+        summary: "",
         trs: [],
         links: [],
         others: []
     };
-    var firstBlock = comments[0];
-    if (firstBlock.type !== TYPE_BLOCK) {
-        firstBlock = comments[1];
-        index = 1;
-    }
-    // assert.ok(firstBlock.type === TYPE_BLOCK, 'found block');
-    var lines = firstBlock.value.replace(/^\*|[\t ]*\*\s*|\s*\*$/g, '').split('\n@');
-    lines.forEach(function (line) {
-        var mKey = /(\w+)\s*/.exec(line);
-        if (mKey) {
-            data[mKey[1]] = line.substr(mKey[0].length);
-        }
-    });
 
     var configs = [], interfaces = [];
     // walk around program
@@ -190,7 +179,9 @@ function handleExtension(dir, name) {
     function onAssignWidgetDefaults(properties) {
         properties.forEach(function (prop) {
             // find comment
-            //console.log('find comment for ' + prop.key.name, prop.range);
+            if (prop.key.name === 'getTitle') {
+                debugger;
+            }
             var propName = prop.key.name, comment;
             if (comment = findCommentBefore(prop.range[0])) {
                 onComment(propName, prop.value, comment);
@@ -227,36 +218,35 @@ function handleExtension(dir, name) {
         var obj, type;
 
         if (comment.type === TYPE_BLOCK) {
-            comment.value.replace(/^\*|[\t ]*\*\s*|[\t ]*\*$/g, '').split('\n@').forEach(function (line) {
-                var mKey = /(\w+)\s*/.exec(line);
+            comment.value.replace(rCommentSplitter, '\n').split('\n@').forEach(function (line) {
+                var mKey = /(\w+)\s*(?:(?:(\w+)\s*)?\{([\w\|]+)\}\s*)?/.exec(line);
                 if (!mKey) return;
                 var key = mKey[1], value = line.substr(mKey[0].length);
                 if (key === 'config' || key === 'interface') {
                     obj = {
                         name: name,
+                        type: mKey[3] || guessType(expr),
                         defaultValue: defaultVal,
                         explain: value,
                         params: params
                     };
                     type = key;
                 } else if (obj && key === 'param') {
-                    var mParam = /^(\w*)\s*(?:\{(\w+)\})?\s*(.*)/.exec(value);
-                    if (mParam) {
-                        (obj.params || (obj.params = [])).push({
-                            name: mParam[1],
-                            type: mParam[2] || '',
-                            desc: mParam[3]
-                        });
+                    var paramName = mKey[2];
+                    if (!paramName && expr.type === 'FunctionExpression') {
+                        paramName = expr.params[obj.params ? obj.params.length : 0].name;
                     }
+                    (obj.params || (obj.params = [])).push({
+                        name: paramName,
+                        type: mKey[3] || '',
+                        desc: value
+                    });
                 } else if (obj && key === 'returns') {
-                    mParam = /^(?:\{(\w+)\})?\s*(.*)/.exec(value);
-                    if (mParam) {
-                        (obj.params || (obj.params = [])).push({
-                            name: '返回',
-                            type: mParam[1] || '',
-                            desc: mParam[2]
-                        });
-                    }
+                    (obj.params || (obj.params = [])).push({
+                        name: '返回',
+                        type: mKey[3] || '',
+                        desc: value
+                    });
                     obj.returns = value
                 } else {
                     console.log('thrown comment line', key);
@@ -265,11 +255,12 @@ function handleExtension(dir, name) {
 
         } else {
             var mKey;
-            if (mKey = /^\s*@(config|interface)\s/.exec(comment.value)) {
+            if (mKey = /^\s*@(config|interface)\s*(?:\{([\w|]+)\})?/.exec(comment.value)) {
                 var key = mKey[1], value = comment.value.substr(mKey[0].length);
                 if (key === 'config' || key === 'interface') {  // single line config
                     obj = {
                         name: name,
+                        type: mKey[2] || guessType(expr),
                         defaultValue: defaultVal,
                         explain: value
                     };
@@ -281,6 +272,21 @@ function handleExtension(dir, name) {
         else if (type === 'interface') interfaces.push(obj);
     }
 
+    function guessType(expr) {
+        if (!expr) return '';
+        if (expr.type === 'Literal') {
+            return (typeof expr.value).replace(/^\w/, function (m) {
+                return m.toUpperCase();
+            });
+        }
+        var m = /^(.+)Expression$/.exec(expr.type);
+
+        if (m) {
+            return m[1];
+        }
+        return expr.type;
+    }
+
     function findCommentBefore(before) { //TODO: binary search
         for (var i = 0, L = comments.length - 1; i < L; i++) {
             if (comments[i].range[1] > before) break;
@@ -288,7 +294,7 @@ function handleExtension(dir, name) {
         var comment = comments[i - 1];
         if (comment && !content.substring(comment.range[1], before).trim()) {
             // only blank
-            comments.splice(i, 1);
+            comments.splice(i - 1, 1);
             return comment;
         }
     }
@@ -310,7 +316,7 @@ function handleExtension(dir, name) {
 
     comments.forEach(function (comment) {
         if (comment.type === TYPE_BLOCK) { // block comment
-            var lines = comment.value.replace(/^\*|[\t ]*\*\s*|\s*\*$/g, '').split('\n@');
+            var lines = comment.value.replace(rCommentSplitter, '\n').split('\n@');
             lines.some(function (line) {
                 var mKey = /(\w+)\s*/.exec(line);
                 if (!mKey) return;
