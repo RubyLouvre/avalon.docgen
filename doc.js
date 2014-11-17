@@ -79,127 +79,169 @@ function handleExtension(dir, name) {
 
     var configs = [], interfaces = [];
     // walk around program
-    program.body.some(function (stmt) {
-        if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'CallExpression' && stmt.expression.callee.name === 'define') { // calls define
-            var args = stmt.expression['arguments'],
-                lastArg = args [args.length - 1];
-            if (lastArg.type === 'FunctionExpression') {
-                lastArg.body.body.forEach(function (stmt) {
-                    if (stmt.type === 'VariableDeclaration') { // find var widget = function()...
-                        stmt.declarations.forEach(function (decl) {
-                            if (decl.id.name === 'widget' && decl.init) {
-                                onVarWidget(decl.init);
-                            }
-                        });
-                    } else if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'AssignmentExpression') {
-                        // find widget.defaults =
-                        var expr = stmt.expression;
-                        //console.log('assign', expr.left);
-                        if (expr.left.type === 'MemberExpression' && expr.left.property.name === 'defaults') {
-                            var rval = expr.right;
-                            while (rval.type === 'AssignmentExpression') {
-                                rval = rval.right;
-                            }
-                            if (rval.type === 'ObjectExpression') {
-                                onAssignWidgetDefaults(rval.properties);
-                            }
-                        }
-                    } else if (stmt.type === 'FunctionDeclaration' && stmt.id.name.toLowerCase() === name) { // function Name(...)
-                        onConstructor(stmt.body.body);
-                    }
-                });
-            }
-            return true; // End program.body.some()
-        }
-    });
 
-    function onConstructor(body) {
-        body.forEach(function (stmt) {
-            var expr = stmt.type === 'ExpressionStatement' && stmt.expression;
-            if (expr && expr.type === 'AssignmentExpression' &&
-                expr.left.type === 'MemberExpression' && expr.left.object.type === 'ThisExpression') {
-                // this.xxx = xxx
-                console.log('onAssign', expr.left.property.name);
-                onAssignment(expr);
-            }
-        });
-    }
-
-    function onVarWidget(expr) {
-        while (expr.type === 'AssignmentExpression') {
-            expr = expr.right;
-        }// widget = function(elem, data, vmodels)
-        // find define expression
-        expr.body.body.forEach(function (stmt) {
-            if (stmt.type === 'VariableDeclaration') {
-                stmt.declarations.forEach(function (decl) {
-                    if (decl.id.name === 'vmodel' && decl.init) {
-                        var init = decl.init;
-                        if (init.type === 'CallExpression' && init.callee.type === 'MemberExpression' &&
-                            init.callee.object.name === 'avalon' && init.callee.property.name === 'define') {
-                            // avalon.define
-                            var args = init['arguments'], cb = args[args.length - 1];
-                            onVarVmodel(cb.params[0].name, cb.body.body);
-                        }
-                    }
-                });
-            }
-        });
-    }
-
-    function onVarVmodel(vm, body) {
-        // assert.ok(expr.type === 'CallExpression'
-        body.forEach(function (stmt, i) {
-            var expr = stmt.type === 'ExpressionStatement' && stmt.expression;
-            if (expr && expr.type === 'AssignmentExpression' &&
-                expr.left.type === 'MemberExpression' && expr.left.object.name === vm) {
-                onAssignment(expr);
-            }
-        });
-    }
-
-    function onAssignment(expr) {
-        var rval = expr.right;
-        while (rval.type === 'AssignmentExpression') {
-            rval = rval.right;
-        }
-        var propName = expr.left.property.name, comment;
-        // find comment
-        if (comment = findCommentBefore(expr.range[0])) {
-            // find comment before assign expression
-            onComment(propName, rval, comment);
-        } else if (comment = findInlineCommentAfter(expr.range[1])) {
-            onComment(propName, rval, comment);
-        } else if (rval.type === 'FunctionExpression' && (comment = findInlineCommentAfter(rval.body.range[0] + 1))) {
-            // find comment after function decl
-            onComment(propName, rval, comment);
-        }
-    }
-
-    function onAssignWidgetDefaults(properties) {
-        properties.forEach(function (prop) {
-            // find comment
-            if (prop.key.name === 'getTitle') {
-                debugger;
-            }
-            var propName = prop.key.name, comment;
-            if (comment = findCommentBefore(prop.range[0])) {
-                onComment(propName, prop.value, comment);
-            } else if (prop.value.type === 'ObjectExpression' && (comment = findInlineCommentAfter(prop.value.range[0] + 1))) {
-                onComment(propName, null, comment);
-            } else {
-                var propEnd = prop.range[1],
-                    m = /\s*,/.exec(content.substr(propEnd));
-                if (m) {
-                    propEnd += m[0].length;
+    var statementWalkers = {
+        ExpressionStatement: function (stmt) {
+            onExpression(stmt.expression);
+        },
+        FunctionDeclaration: function (stmt) {
+            walkStatements(stmt.body.body);
+        },
+        VariableDeclaration: function (stmt) {
+            stmt.declarations.forEach(function (decl) {
+                var expr = decl.init;
+                if (!expr) return;
+                while (expr.type === 'AssignmentExpression') {
+                    expr = expr.right;
                 }
-                if (comment = findInlineCommentAfter(propEnd)) {
+                onExpression(expr);
+            });
+        },
+        ReturnStatement: function (stmt) {
+            stmt.argument && onExpression(stmt.argument);
+        },
+        IfStatement: function (stmt) {
+            //stmt.consequent && onBlockOrStmt(stmt.consequent);
+            //stmt.alternate && onBlockOrStmt(stmt.alternate);
+        },
+        WhileStatement: function (stmt) {
+            //onBlockOrStmt(stmt.body);
+        },
+        ForStatement: function (stmt) {
+            //onBlockOrStmt(stmt.body);
+        },
+        ForInStatement: function (stmt) {
+            //onBlockOrStmt(stmt.body);
+        },
+        SwitchStatement: function (stmt) {
+            onExpression(stmt.discriminant);
+            stmt.cases.forEach(function (switchCase) {
+                if (switchCase.test) {
+                    onExpression(switchCase.test);
+                }
+                walkStatements(switchCase.consequent);
+            });
+        },
+        BreakStatement: Noop,
+        TryStatement: function (stmt) {
+            walkStatements(stmt.block.body);
+            stmt.handlers && stmt.handlers.forEach(function (handler) {
+                walkStatements(handler.body.body)
+            });
+            stmt.finalizer && walkStatements(stmt.finalizer.body);
+        }
+    };
+
+    function onBlockOrStmt(entity) {
+        if (entity.type === 'BlockStatement') {
+            walkStatements(entity.body);
+        } else {
+            onStatement(entity);
+        }
+    }
+
+    var expressionWalkers = {
+        CallExpression: function (expr) {
+            onExpression(expr.callee);
+            expr['arguments'].forEach(onExpression)
+        },
+        FunctionExpression: function (expr) {
+            walkStatements(expr.body.body);
+        },
+        AssignmentExpression: function (expr) {
+            var val = expr.right;
+            if (expr.left.type === 'MemberExpression') {
+                var propName = expr.left.property.name, comment;
+                // find comment
+                if (comment = findCommentBefore(expr.range[0])) {
+                    // find comment before assign expression
+                    onComment(propName, val, comment);
+                } else if (comment = findInlineCommentAfter(expr.range[1])) {
+                    onComment(propName, val, comment);
+                } else if (val.type === 'FunctionExpression' && (comment = findInlineCommentAfter(val.body.range[0] + 1))) {
+                    // find comment after function decl
+                    onComment(propName, val, comment);
+                }
+            }
+            onExpression(val);
+        },
+        ArrayExpression: function (expr) {
+            expr.elements.forEach(onExpression);
+        },
+        ObjectExpression: function (expr) {
+            expr.properties.forEach(function (prop) {
+                // find comment
+                var propName = prop.key.name, comment;
+                if (comment = findCommentBefore(prop.range[0])) {
                     onComment(propName, prop.value, comment);
+                } else if (prop.value.type === 'ObjectExpression' && (comment = findInlineCommentAfter(prop.value.range[0] + 1))) {
+                    onComment(propName, null, comment);
+                } else {
+                    var propEnd = prop.range[1],
+                        m = /\s*,/.exec(content.substr(propEnd));
+                    if (m) {
+                        propEnd += m[0].length;
+                    }
+                    if (comment = findInlineCommentAfter(propEnd)) {
+                        onComment(propName, prop.value, comment);
+                    }
                 }
-            }
 
-        });
+            });
+        },
+        Identifier: Noop,
+        Literal: Noop,
+        ThisExpression: Noop,
+        MemberExpression: function (expr) {
+            onExpression(expr.object);
+            onExpression(expr.property);
+        },
+        UnaryExpression: function (expr) {
+            onExpression(expr.argument);
+        },
+        BinaryExpression: function (expr) {
+            onExpression(expr.left);
+            onExpression(expr.right);
+        },
+        ConditionalExpression: function (expr) {
+            onExpression(expr.test);
+            onExpression(expr.consequent);
+            onExpression(expr.alternate);
+        },
+        UpdateExpression: function (expr) {
+            onExpression(expr.argument);
+        }
+    };
+
+    expressionWalkers.NewExpression = expressionWalkers.CallExpression;
+    expressionWalkers.LogicalExpression = expressionWalkers.BinaryExpression;
+
+    function Noop() {
     }
+
+    function onExpression(expr) {
+        //console.log('handle expr ' + expr.type);
+        if (expr.type in expressionWalkers) {
+            expressionWalkers[expr.type](expr);
+        } else {
+            console.log('TODO: handle expression', expr);
+        }
+    }
+
+    function onStatement(stmt) {
+        //console.log('handle stmt ' + stmt.type);
+        if (stmt.type in statementWalkers) {
+            statementWalkers[stmt.type](stmt);
+        } else {
+            console.log('TODO: handle statement', stmt);
+        }
+    }
+
+    function walkStatements(stmts) {
+        stmts.forEach(onStatement);
+    }
+
+    walkStatements(program.body);
 
     function onComment(name, expr, comment) {
         //console.log(name, expr, comment);
@@ -241,7 +283,7 @@ function handleExtension(dir, name) {
                         type: mKey[3] || '',
                         desc: value
                     });
-                } else if (obj && key === 'returns') {
+                } else if (obj && (key === 'returns' || key === 'return')) {
                     (obj.params || (obj.params = [])).push({
                         name: '返回',
                         type: mKey[3] || '',
@@ -249,7 +291,7 @@ function handleExtension(dir, name) {
                     });
                     obj.returns = value
                 } else {
-                    console.log('thrown comment line', key);
+                    onUnknownComment(key, value);
                 }
             })
 
@@ -314,6 +356,22 @@ function handleExtension(dir, name) {
     }
 
 
+    function onUnknownComment(key, value) {
+        if (key === 'links') {
+            var rLink = /\[(.+?)\]\((.+?)\)/g, m;
+            while (m = rLink.exec(value)) {
+                data.links.push({text: m[1], href: m[2]});
+            }
+        } else if (key === 'other') {
+            data.others.push(filterValue(value));
+        } else { // others
+            if (key === 'introduce') {
+                value = filterValue(value);
+            }
+            data[key] = value;
+        }
+    }
+
     comments.forEach(function (comment) {
         if (comment.type === TYPE_BLOCK) { // block comment
             var lines = comment.value.replace(rCommentSplitter, '\n').split('\n@');
@@ -323,18 +381,8 @@ function handleExtension(dir, name) {
                 var key = mKey[1], value = line.substr(mKey[0].length);
                 if (key === 'config') {
                 } else if (key === 'interface') {
-                } else if (key === 'links') {
-                    var rLink = /\[(.+?)\]\((.+?)\)/g, m;
-                    while (m = rLink.exec(value)) {
-                        data.links.push({text: m[1], href: m[2]});
-                    }
-                } else if (key === 'other') {
-                    data.others.push(filterValue(value));
-                } else { // others
-                    if (key === 'introduce') {
-                        value = filterValue(value);
-                    }
-                    data[key] = value;
+                } else {
+                    onUnknownComment(key, value);
                 }
             });
         } else { // line comment
@@ -378,6 +426,7 @@ function handleExtension(dir, name) {
         });
     }
 }
+
 if (process.mainModule === module) {
     if (process.argv.length === 2) {
         console.log('Usage: avalon-doc [directory|js file|--all]');
