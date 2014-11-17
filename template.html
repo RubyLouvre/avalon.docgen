@@ -41,7 +41,7 @@
                         <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
                         <% if (tr.params && tr.params.length){ %>
                             <table border="1">
-                                <tr><th>参数名/返回值</th><th>类型</th><th>说明</th></tr>
+                                <tr><th style="width:100px">参数名/返回值</th><th style="width:70px">类型</th><th>说明</th></tr>
                                 <%- for(var j=0, plen=tr.params.length, p; j < plen; j++){
                                     p=tr.params[j] -%>
                                 <tr><td><%= p.name %></td><td><%= p.type %></td><td><%= p.desc %></td></tr>
