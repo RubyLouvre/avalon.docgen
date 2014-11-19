@@ -404,6 +404,31 @@ function handleExtension(dir, name) {
         data.trs = data.trs.concat({span: '接口方法与固有属性'}, interfaces);
     }
 
+    // 添加扫目录获取例子的功能
+    // console.log(data.links);
+    var noFileCount = 0, count = 0, example = "", exampleHtml, hTitle, pTitle,tTitle,computeLinks=[]
+    while(noFileCount < 5) {
+        example = dir + "/avalon." + dir + ".ex" + (count ? count : "") + ".html"
+        if(fs.existsSync(example)) {
+            exampleHtml = fs.readFileSync(example, {encoding: "utf-8"})
+            hTitle = exampleHtml.match(/<h[^>]+>[^<]+<\/h[1-2]>/g)
+            pTitle = exampleHtml.match(/<p class=\"example\">[^<]+/g)
+            hTitle = hTitle ? hTitle[0] : ""
+            pTitle = pTitle ? pTitle[0] : ""
+            tTitle = (pTitle || hTitle).replace(/[（）]/g, "").replace(/<[^>]+>/g, "")
+            computeLinks.push({
+                text: tTitle,
+                href: example.split("/")[1]
+            })
+        } else {
+            noFileCount++;
+        }
+        count++
+    }
+    // do merge
+    if(!data.links.length) {
+        data.links = computeLinks
+    }
     //console.log(data);
     data.introduceInHead = trimHTML(data.introduce.substr(0, 300));
     var result = html_beautify(tmpl(data), {

@@ -39,3 +39,7 @@ avalon.oniui的注释文档生成器
 
     $ avalon-doc at/avalon.at.js
 
+#### 例子的生成
+
+当avalon.uiname.js里不存在例子列表注释的时候，则会进入扫描目录逻辑，扫描avalon.uiname.ex[0-9]+.html，并提取其<h[1-2]></h[1-2]>内内容作为title生成例子列表，例如 avalon.tooltip.ex1.html && <h1>接口触发显示</h1> => <a href="avalon.tooltip.ex1.html">接口触发显示</a>
+
