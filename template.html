@@ -15,6 +15,7 @@
                 <legend><%= @cnName %></legend>
                 <%= @introduce %>
             </fieldset>
+           <%if ( @trs.length ){ % >
             <fieldset>
                 <legend>使用说明</legend>
                 <%= @summary %>
@@ -55,6 +56,7 @@
                     <%- } -%>
                 </table>
             </fieldset>
+             <% } %>
             <%- for(var i=0, n = @others.length, other; i < n; i++){
                 other = @others[i] -%>
             <div class="others"><%= other %></div>
