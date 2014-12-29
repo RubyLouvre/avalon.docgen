@@ -378,7 +378,7 @@ function handleExtension(dir, name) {
             lines.some(function (line) {
                 var mKey = /(\w+)\s*/.exec(line);
                 if (!mKey) return;
-                var key = mKey[1], value = line.substr(mKey[0].length);
+                var key = mKey[1], value = line.substr(mKey[0].length + mKey.index);
                 if (key === 'config') {
                 } else if (key === 'interface') {
                 } else {
