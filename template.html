@@ -16,46 +16,44 @@
                 <%= @introduce %>
             </fieldset>
             <%if ( @trs.length ){ %>
-            <fieldset>
-                <legend>使用说明</legend>
-                <%= @summary %>
-                <table class="table-doc" border="1">
-                    <colgroup>
-                        <col width="180"/>
-                        <col width="80"/>
-                        <col width="120"/>
-                    </colgroup>
-                    <tr>
-                        <th>名字</th>
-                        <th>类型</th>
-                        <th>默认值</th>
-                        <th>说明</th>
-                    </tr>
-                    <%- for(var i=0, n = @trs.length, tr; i < n; i++){ -%>
-                    <tr>
-                        <% tr = @trs[i] -%>
-                        <% if(tr.span){ %>
-                        <td align="center" colspan="4"><%= tr.span %></td>
-                        <%- } else {-%>
-                        <td><%= tr.name %></td>
-                        <td><%= tr.type %></td>
-                        <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
-                        <% if (tr.params && tr.params.length){ %>
-                            <table border="1">
-                                <tr><th style="width:100px">参数名/返回值</th><th style="width:70px">类型</th><th>说明</th></tr>
-                                <%- for(var j=0, plen=tr.params.length, p; j < plen; j++){
-                                    p=tr.params[j] -%>
-                                <tr><td><%= p.name %></td><td><%= p.type %></td><td><%= p.desc %></td></tr>
-                                <% } %>
-                            </table>
-                        <% } %>
+            <h3 class="table-doc-title">使用说明</h3>
+            <%= @summary %>
+            <table class="table-doc" border="1">
+                <colgroup>
+                    <col width="180"/>
+                    <col width="95"/>
+                    <col width="120"/>
+                </colgroup>
+                <tr>
+                    <th>名字</th>
+                    <th>类型</th>
+                    <th>默认值</th>
+                    <th>说明</th>
+                </tr>
+                <%- for(var i=0, n = @trs.length, tr; i < n; i++){ -%>
+                <tr>
+                    <% tr = @trs[i] -%>
+                    <% if(tr.span){ %>
+                    <td align="center" colspan="4"><%= tr.span %></td>
+                    <%- } else {-%>
+                    <td><%= tr.name %></td>
+                    <td><%= tr.type %></td>
+                    <td><%= tr.defaultValue %></td>   <td><%= tr.explain %>
+                    <% if (tr.params && tr.params.length){ %>
+                        <table border="1">
+                            <tr><th style="width:100px">参数名/返回值</th><th style="width:70px">类型</th><th>说明</th></tr>
+                            <%- for(var j=0, plen=tr.params.length, p; j < plen; j++){
+                                p=tr.params[j] -%>
+                            <tr><td><%= p.name %></td><td><%= p.type %></td><td><%= p.desc %></td></tr>
+                            <% } %>
+                        </table>
+                    <% } %>
 
-                    </td>
-                        <%- } -%>
-                    </tr>
+                </td>
                     <%- } -%>
-                </table>
-            </fieldset>
+                </tr>
+                <%- } -%>
+            </table>
             <% } %>
             <%- for(var i=0, n = @others.length, other; i < n; i++){
                 other = @others[i] -%>
